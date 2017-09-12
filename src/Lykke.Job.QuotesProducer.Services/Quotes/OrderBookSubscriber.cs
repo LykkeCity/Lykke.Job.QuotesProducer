@@ -82,6 +82,11 @@ namespace Lykke.Job.QuotesProducer.Services.Quotes
                     return;
                 }
 
+                if (!orderBook.Prices.Any())
+                {
+                    return;
+                }
+
                 await _quotesManager.ProcessOrderBookAsync(orderBook);
             }
             catch (Exception ex)
@@ -115,10 +120,6 @@ namespace Lykke.Job.QuotesProducer.Services.Quotes
                 if (orderBook.Prices == null)
                 {
                     errors.Add("Invalid 'Prices': null");
-                }
-                else if (orderBook.Prices.Count == 0)
-                {
-                    errors.Add("Empty 'Prices': null");
                 }
             }
 
