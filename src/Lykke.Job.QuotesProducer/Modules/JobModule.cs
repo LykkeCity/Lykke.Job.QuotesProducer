@@ -27,9 +27,6 @@ namespace Lykke.Job.QuotesProducer.Modules
 
         protected override void Load(ContainerBuilder builder)
         {
-            builder.RegisterInstance(_settings)
-                .SingleInstance();
-
             builder.RegisterInstance(_log)
                 .As<ILog>()
                 .SingleInstance();
