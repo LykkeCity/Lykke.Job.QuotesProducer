@@ -61,12 +61,12 @@ namespace Lykke.Job.QuotesProducer.Services.Quotes
 
         public void Dispose()
         {
-            _subscriber.Dispose();
+            _subscriber?.Dispose();
         }
 
         public void Stop()
         {
-            _subscriber.Stop();
+            _subscriber?.Stop();
         }
 
         private async Task ProcessOrderBookAsync(IOrderBook orderBook)

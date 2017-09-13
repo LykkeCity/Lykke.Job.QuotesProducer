@@ -22,9 +22,10 @@ namespace Lykke.Job.QuotesProducer
     public class Startup
     {
         public IHostingEnvironment Environment { get; }
-        public IContainer ApplicationContainer { get; set; }
+        public IContainer ApplicationContainer { get; private set; }
         public IConfigurationRoot Configuration { get; }
-
+        public ILog Log { get; private set; }
+        
         public Startup(IHostingEnvironment env)
         {
             var builder = new ConfigurationBuilder()
@@ -53,15 +54,16 @@ namespace Lykke.Job.QuotesProducer
 
             var builder = new ContainerBuilder();
             var appSettings = Configuration.LoadSettings<AppSettings>();
-            var log = CreateLogWithSlack(services, appSettings);
+            Log = CreateLogWithSlack(services, appSettings);
 
-            builder.RegisterModule(new JobModule(appSettings.Nested(x => x.QuotesProducerJob), log));
+            builder.RegisterModule(new JobModule(appSettings.Nested(x => x.QuotesProducerJob), Log));
             builder.Populate(services);
 
             ApplicationContainer = builder.Build();
 
             return new AutofacServiceProvider(ApplicationContainer);
         }
+
 
         public void Configure(IApplicationBuilder app, IHostingEnvironment env, IApplicationLifetime appLifetime)
         {
@@ -84,33 +86,54 @@ namespace Lykke.Job.QuotesProducer
 
         private void StartApplication()
         {
-            Console.WriteLine("Starting...");
+            try
+            {
+                Console.WriteLine("Starting...");
 
-            var startupManager = ApplicationContainer.Resolve<IStartupManager>();
+                var startupManager = ApplicationContainer.Resolve<IStartupManager>();
 
-            startupManager.StartAsync().Wait();
+                startupManager.StartAsync().Wait();
 
-            Console.WriteLine("Started");
+                Console.WriteLine("Started");
+            }
+            catch (Exception ex)
+            {
+                Log.WriteFatalErrorAsync(nameof(Startup), nameof(StartApplication), "", ex);
+            }
         }
 
         private void StopApplication()
         {
-            Console.WriteLine("Stopping...");
+            try
+            {
+                Console.WriteLine("Stopping...");
 
-            var shutdownManager = ApplicationContainer.Resolve<IShutdownManager>();
+                var shutdownManager = ApplicationContainer.Resolve<IShutdownManager>();
 
-            shutdownManager.ShutdownAsync();
+                shutdownManager.ShutdownAsync();
 
-            Console.WriteLine("Stopped");
+                Console.WriteLine("Stopped");
+            }
+            catch (Exception ex)
+            {
+                Log.WriteFatalErrorAsync(nameof(Startup), nameof(StopApplication), "", ex);
+            }
         }
 
         private void CleanUp()
         {
-            Console.WriteLine("Cleaning up...");
+            try
+            {
+                Console.WriteLine("Cleaning up...");
 
-            ApplicationContainer.Dispose();
+                ApplicationContainer.Dispose();
 
-            Console.WriteLine("Cleaned up");
+                Console.WriteLine("Cleaned up");
+            }
+            catch (Exception ex)
+            {
+                Log.WriteFatalErrorAsync(nameof(Startup), nameof(CleanUp), "", ex);
+            }
         }
 
         private static ILog CreateLogWithSlack(IServiceCollection services, IReloadingManager<AppSettings> settings)

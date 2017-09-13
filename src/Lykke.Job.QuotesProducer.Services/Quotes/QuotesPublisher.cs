@@ -44,12 +44,12 @@ namespace Lykke.Job.QuotesProducer.Services.Quotes
 
         public void Dispose()
         {
-            _publisher.Dispose();
+            _publisher?.Dispose();
         }
 
         public void Stop()
         {
-            _publisher.Stop();
+            _publisher?.Stop();
         }
 
         public Task PublishAsync(IQuote candle)
