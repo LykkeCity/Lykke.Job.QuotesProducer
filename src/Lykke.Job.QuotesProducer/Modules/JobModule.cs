@@ -16,12 +16,14 @@ namespace Lykke.Job.QuotesProducer.Modules
 {
     public class JobModule : Module
     {
-        private readonly IReloadingManager<AppSettings.QuotesProducerSettings> _settings;
+        private readonly AppSettings.QuotesProducerSettings _settings;
+        private readonly IReloadingManager<AppSettings.DbSettings> _dbSettings;
         private readonly ILog _log;
 
-        public JobModule(IReloadingManager<AppSettings.QuotesProducerSettings> settings, ILog log)
+        public JobModule(AppSettings.QuotesProducerSettings settings, IReloadingManager<AppSettings.DbSettings> dbSettings, ILog log)
         {
             _settings = settings;
+            _dbSettings = dbSettings;
             _log = log;
         }
 
@@ -44,15 +46,15 @@ namespace Lykke.Job.QuotesProducer.Modules
             builder.RegisterType<OrderBookSubscriber>()
                 .As<IOrderBookSubscriber>()
                 .SingleInstance()
-                .WithParameter(TypedParameter.From(_settings.CurrentValue.OrderbookSubscription));
+                .WithParameter(TypedParameter.From(_settings.Rabbit.OrderbookSubscription));
 
             builder.RegisterType<QuotesPublisher>()
                 .As<IQuotesPublisher>()
                 .SingleInstance()
-                .WithParameter(TypedParameter.From(_settings.CurrentValue.QuotesPublication))
+                .WithParameter(TypedParameter.From(_settings.Rabbit.QuotesPublication))
                 .WithParameter(TypedParameter.From<IPublishingQueueRepository<IQuote>>(
                     new BlobPublishingQueueRepository<Quote, IQuote>(
-                        AzureBlobStorage.Create(_settings.ConnectionString(x => x.Db.PublisherMessageSnapshotsConnString)))));
+                        AzureBlobStorage.Create(_dbSettings.ConnectionString(x => x.PublisherMessageSnapshotsConnString)))));
 
             builder.RegisterType<QuotesManager>()
                 .As<IQuotesManager>();

@@ -6,7 +6,6 @@ using Common;
 using Common.Log;
 using Lykke.Domain.Prices.Contracts;
 using Lykke.Domain.Prices.Model;
-using Lykke.Job.QuotesProducer.Core;
 using Lykke.Job.QuotesProducer.Core.Services.Quotes;
 using Lykke.RabbitMqBroker;
 using Lykke.RabbitMqBroker.Subscriber;
@@ -17,27 +16,21 @@ namespace Lykke.Job.QuotesProducer.Services.Quotes
     {
         private readonly ILog _log;
         private readonly IQuotesManager _quotesManager;
-        private readonly AppSettings.RabbitSettingsWithDeadLetter _rabbitSettings;
+        private readonly string _rabbitConnectionString;
         private RabbitMqSubscriber<IOrderBook> _subscriber;
 
-        public OrderBookSubscriber(ILog log, IQuotesManager quotesManager, AppSettings.RabbitSettingsWithDeadLetter rabbitSettings)
+        public OrderBookSubscriber(ILog log, IQuotesManager quotesManager, string rabbitConnectionString)
         {
             _log = log;
             _quotesManager = quotesManager;
-            _rabbitSettings = rabbitSettings;
+            _rabbitConnectionString = rabbitConnectionString;
         }
 
         public void Start()
         {
-            var settings = new RabbitMqSubscriptionSettings
-            {
-                ConnectionString = _rabbitSettings.ConnectionString,
-                QueueName = $"{_rabbitSettings.ExchangeName}.quotesproducer",
-                ExchangeName = _rabbitSettings.ExchangeName,
-                DeadLetterExchangeName = _rabbitSettings.DeadLetterExchangeName,
-                RoutingKey = "",
-                IsDurable = true
-            };
+            var settings = RabbitMqSubscriptionSettings
+                .CreateForSubscriber(_rabbitConnectionString, "orderbook", "quotesproducer")
+                .MakeDurable();
 
             try
             {

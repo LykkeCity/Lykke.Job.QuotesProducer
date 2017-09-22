@@ -1,38 +1,34 @@
 ﻿using System.Threading.Tasks;
 using Common.Log;
 using Lykke.Domain.Prices.Contracts;
-using Lykke.Job.QuotesProducer.Core;
 using Lykke.Job.QuotesProducer.Core.Services.Quotes;
 using Lykke.RabbitMqBroker.Publisher;
+using Lykke.RabbitMqBroker.Subscriber;
 
 namespace Lykke.Job.QuotesProducer.Services.Quotes
 {
     public class QuotesPublisher : IQuotesPublisher
     {
         private readonly ILog _log;
-        private readonly AppSettings.RabbitSettings _rabbitSettings;
+        private readonly string _rabbitConnectionString;
         private readonly IPublishingQueueRepository<IQuote> _publishingQueueRepository;
         private RabbitMqPublisher<IQuote> _publisher;
 
         public QuotesPublisher(
             ILog log,
-            AppSettings.RabbitSettings rabbitSettings,
+            string rabbitConnectionString,
             IPublishingQueueRepository<IQuote> publishingQueueRepository)
         {
             _log = log;
-            _rabbitSettings = rabbitSettings;
+            _rabbitConnectionString = rabbitConnectionString;
             _publishingQueueRepository = publishingQueueRepository;
         }
 
         public void Start()
         {
-            var settings = new RabbitMqBroker.Subscriber.RabbitMqSubscriptionSettings
-            {
-                ConnectionString = _rabbitSettings.ConnectionString,
-                ExchangeName = _rabbitSettings.ExchangeName,
-                IsDurable = true,
-                RoutingKey = ""
-            };
+            var settings = RabbitMqSubscriptionSettings
+                .CreateForPublisher(_rabbitConnectionString, "quotefeed")
+                .MakeDurable();
 
             _publisher = new RabbitMqPublisher<IQuote>(settings)
                 .SetSerializer(new JsonMessageSerializer<IQuote>())

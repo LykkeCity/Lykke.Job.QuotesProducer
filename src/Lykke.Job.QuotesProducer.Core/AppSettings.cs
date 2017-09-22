@@ -7,20 +7,14 @@
 
         public class QuotesProducerSettings
         {
-            public RabbitSettingsWithDeadLetter OrderbookSubscription { get; set; }
-            public RabbitSettings QuotesPublication { get; set; }
+            public RabbitConnectionSettings Rabbit { get; set; }
             public DbSettings Db { get; set; }
         }
 
-        public class RabbitSettings
+        public class RabbitConnectionSettings
         {
-            public string ConnectionString { get; set; }
-            public string ExchangeName { get; set; }
-        }
-
-        public class RabbitSettingsWithDeadLetter : RabbitSettings
-        {
-            public string DeadLetterExchangeName { get; set; }
+            public string OrderbookSubscription { get; set; }
+            public string QuotesPublication { get; set; }
         }
 
         public class DbSettings

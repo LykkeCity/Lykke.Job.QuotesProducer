@@ -56,7 +56,10 @@ namespace Lykke.Job.QuotesProducer
             var appSettings = Configuration.LoadSettings<AppSettings>();
             Log = CreateLogWithSlack(services, appSettings);
 
-            builder.RegisterModule(new JobModule(appSettings.Nested(x => x.QuotesProducerJob), Log));
+            builder.RegisterModule(new JobModule(
+                appSettings.CurrentValue.QuotesProducerJob, 
+                appSettings.Nested(x => x.QuotesProducerJob.Db), 
+                Log));
             builder.Populate(services);
 
             ApplicationContainer = builder.Build();
