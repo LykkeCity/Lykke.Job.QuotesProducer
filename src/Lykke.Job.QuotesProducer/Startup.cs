@@ -159,17 +159,13 @@ namespace Lykke.Job.QuotesProducer
             // Creating azure storage logger, which logs own messages to concole log
             if (!string.IsNullOrEmpty(dbLogConnectionString) && !(dbLogConnectionString.StartsWith("${") && dbLogConnectionString.EndsWith("}")))
             {
-                const string appName = "Lykke.Job.QuotesProducer";
-
                 var persistenceManager = new LykkeLogToAzureStoragePersistenceManager(
-                    appName,
                     AzureTableStorage<LogEntity>.Create(dbLogConnectionStringManager, "QuotesProducerLog", consoleLogger),
                     consoleLogger);
 
-                var slackNotificationsManager = new LykkeLogToAzureSlackNotificationsManager(appName, slackService, consoleLogger);
+                var slackNotificationsManager = new LykkeLogToAzureSlackNotificationsManager(slackService, consoleLogger);
 
                 var azureStorageLogger = new LykkeLogToAzureStorage(
-                    appName,
                     persistenceManager,
                     slackNotificationsManager,
                     consoleLogger);
