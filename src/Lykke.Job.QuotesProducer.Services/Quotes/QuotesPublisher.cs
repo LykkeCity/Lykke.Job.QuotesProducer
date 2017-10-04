@@ -11,17 +11,14 @@ namespace Lykke.Job.QuotesProducer.Services.Quotes
     {
         private readonly ILog _log;
         private readonly string _rabbitConnectionString;
-        private readonly IPublishingQueueRepository<IQuote> _publishingQueueRepository;
         private RabbitMqPublisher<IQuote> _publisher;
 
         public QuotesPublisher(
             ILog log,
-            string rabbitConnectionString,
-            IPublishingQueueRepository<IQuote> publishingQueueRepository)
+            string rabbitConnectionString)
         {
             _log = log;
             _rabbitConnectionString = rabbitConnectionString;
-            _publishingQueueRepository = publishingQueueRepository;
         }
 
         public void Start()
@@ -33,7 +30,7 @@ namespace Lykke.Job.QuotesProducer.Services.Quotes
             _publisher = new RabbitMqPublisher<IQuote>(settings)
                 .SetSerializer(new JsonMessageSerializer<IQuote>())
                 .SetPublishStrategy(new DefaultFanoutPublishStrategy(settings))
-                .SetQueueRepository(_publishingQueueRepository)
+                .PublishSynchronously()
                 .SetLogger(_log)
                 .Start();
         }

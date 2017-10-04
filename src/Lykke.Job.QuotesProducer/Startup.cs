@@ -56,7 +56,6 @@ namespace Lykke.Job.QuotesProducer
 
             builder.RegisterModule(new JobModule(
                 appSettings.CurrentValue.QuotesProducerJob, 
-                appSettings.Nested(x => x.QuotesProducerJob.Db), 
                 Log));
             builder.Populate(services);
 
