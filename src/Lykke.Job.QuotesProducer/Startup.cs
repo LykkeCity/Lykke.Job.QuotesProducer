@@ -110,7 +110,7 @@ namespace Lykke.Job.QuotesProducer
 
                 var shutdownManager = ApplicationContainer.Resolve<IShutdownManager>();
 
-                shutdownManager.ShutdownAsync();
+                shutdownManager.ShutdownAsync().Wait();
 
                 Console.WriteLine("Stopped");
             }
