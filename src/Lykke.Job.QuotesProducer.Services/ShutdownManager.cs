@@ -1,4 +1,4 @@
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Common.Log;
 using Lykke.Job.QuotesProducer.Core.Services;
 using Lykke.Job.QuotesProducer.Core.Services.Quotes;
