@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 using Autofac;
 using Autofac.Extensions.DependencyInjection;
 using AzureStorage.Tables;
@@ -38,102 +39,118 @@ namespace Lykke.Job.QuotesProducer
 
         public IServiceProvider ConfigureServices(IServiceCollection services)
         {
-            services.AddMvc()
-                .AddJsonOptions(options =>
+            try
+            {
+                services.AddMvc()
+                    .AddJsonOptions(options =>
+                    {
+                        options.SerializerSettings.ContractResolver =
+                            new Newtonsoft.Json.Serialization.DefaultContractResolver();
+                    });
+
+                services.AddSwaggerGen(options =>
                 {
-                    options.SerializerSettings.ContractResolver =
-                        new Newtonsoft.Json.Serialization.DefaultContractResolver();
+                    options.DefaultLykkeConfiguration("v1", "QuotesProducer API");
                 });
 
-            services.AddSwaggerGen(options =>
+                var builder = new ContainerBuilder();
+                var appSettings = Configuration.LoadSettings<AppSettings>();
+                Log = CreateLogWithSlack(services, appSettings);
+
+                builder.RegisterModule(new JobModule(
+                    appSettings.CurrentValue.QuotesProducerJob,
+                    Log));
+                builder.Populate(services);
+
+                ApplicationContainer = builder.Build();
+
+                return new AutofacServiceProvider(ApplicationContainer);
+            }
+            catch (Exception ex)
             {
-                options.DefaultLykkeConfiguration("v1", "QuotesProducer API");
-            });
-
-            var builder = new ContainerBuilder();
-            var appSettings = Configuration.LoadSettings<AppSettings>();
-            Log = CreateLogWithSlack(services, appSettings);
-
-            builder.RegisterModule(new JobModule(
-                appSettings.CurrentValue.QuotesProducerJob, 
-                Log));
-            builder.Populate(services);
-
-            ApplicationContainer = builder.Build();
-
-            return new AutofacServiceProvider(ApplicationContainer);
+                Log?.WriteFatalErrorAsync(nameof(Startup), nameof(ConfigureServices), "", ex).Wait();
+                throw;
+            }
         }
 
 
         public void Configure(IApplicationBuilder app, IHostingEnvironment env, IApplicationLifetime appLifetime)
         {
-            if (env.IsDevelopment())
-            {
-                app.UseDeveloperExceptionPage();
-            }
-
-            app.UseLykkeMiddleware("QuotesProducer", ex => new ErrorResponse { ErrorMessage = "Technical problem" });
-
-            app.UseMvc();
-            app.UseSwagger();
-            app.UseSwaggerUi();
-            app.UseStaticFiles();
-
-            appLifetime.ApplicationStarted.Register(StartApplication);
-            appLifetime.ApplicationStopping.Register(StopApplication);
-            appLifetime.ApplicationStopped.Register(CleanUp);
-        }
-
-        private void StartApplication()
-        {
             try
             {
-                Console.WriteLine("Starting...");
+                if (env.IsDevelopment())
+                {
+                    app.UseDeveloperExceptionPage();
+                }
 
-                var startupManager = ApplicationContainer.Resolve<IStartupManager>();
+                app.UseLykkeMiddleware("QuotesProducer", ex => new ErrorResponse
+                {
+                    ErrorMessage = "Technical problem"
+                });
 
-                startupManager.StartAsync().Wait();
+                app.UseMvc();
+                app.UseSwagger();
+                app.UseSwaggerUi();
+                app.UseStaticFiles();
 
-                Console.WriteLine("Started");
+                appLifetime.ApplicationStarted.Register(async () => await StartApplication());
+                appLifetime.ApplicationStopping.Register(async () => await StopApplication());
+                appLifetime.ApplicationStopped.Register(async () => await CleanUp());
             }
             catch (Exception ex)
             {
-                Log?.WriteFatalErrorAsync(nameof(Startup), nameof(StartApplication), "", ex);
+                Log?.WriteFatalErrorAsync(nameof(Startup), nameof(Configure), "", ex).Wait();
+                throw;
             }
         }
 
-        private void StopApplication()
+        private async Task StartApplication()
         {
             try
             {
-                Console.WriteLine("Stopping...");
+                await ApplicationContainer.Resolve<IStartupManager>().StartAsync();
 
-                var shutdownManager = ApplicationContainer.Resolve<IShutdownManager>();
-
-                shutdownManager.ShutdownAsync().Wait();
-
-                Console.WriteLine("Stopped");
+                await Log.WriteMonitorAsync("", "", "Started");
             }
             catch (Exception ex)
             {
-                Log?.WriteFatalErrorAsync(nameof(Startup), nameof(StopApplication), "", ex);
+                await Log.WriteFatalErrorAsync(nameof(Startup), nameof(StartApplication), "", ex);
             }
         }
 
-        private void CleanUp()
+        private async Task StopApplication()
         {
             try
             {
-                Console.WriteLine("Cleaning up...");
+                await ApplicationContainer.Resolve<IShutdownManager>().ShutdownAsync();
+            }
+            catch (Exception ex)
+            {
+                if (Log != null)
+                {
+                    await Log.WriteFatalErrorAsync(nameof(Startup), nameof(StopApplication), "", ex);
+                }
+            }
+        }
+
+        private async Task CleanUp()
+        {
+            try
+            {
+                if (Log != null)
+                {
+                    await Log.WriteMonitorAsync("", "", "Terminating");
+                }
 
                 ApplicationContainer.Dispose();
-
-                Console.WriteLine("Cleaned up");
             }
             catch (Exception ex)
             {
-                Log?.WriteFatalErrorAsync(nameof(Startup), nameof(CleanUp), "", ex);
-                (Log as IDisposable)?.Dispose();
+                if (Log != null)
+                {
+                    await Log.WriteFatalErrorAsync(nameof(Startup), nameof(CleanUp), "", ex);
+                    (Log as IDisposable)?.Dispose();
+                }
             }
         }
 
