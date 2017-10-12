@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using AsyncFriendlyStackTrace;
 using Common;
 using Common.Log;
 using Lykke.Domain.Prices.Contracts;
@@ -36,7 +37,8 @@ namespace Lykke.Job.QuotesProducer.Services.Quotes
             {
                 _subscriber = new RabbitMqSubscriber<IOrderBook>(settings,
                         new ResilientErrorHandlingStrategy(_log, settings,
-                            retryTimeout: TimeSpan.FromSeconds(10),
+                            retryTimeout: TimeSpan.FromSeconds(5),
+                            retryNum: int.MaxValue,
                             next: new DeadQueueErrorHandlingStrategy(_log, settings)))
                     .SetMessageDeserializer(new JsonMessageDeserializer<OrderBook>())
                     .SetMessageReadStrategy(new MessageReadQueueStrategy())
@@ -84,7 +86,8 @@ namespace Lykke.Job.QuotesProducer.Services.Quotes
             }
             catch (Exception ex)
             {
-                await _log.WriteErrorAsync(nameof(OrderBookSubscriber), nameof(ProcessOrderBookAsync), $"Failed to process order book: {orderBook.ToJson()}", ex);
+                await _log.WriteWarningAsync(nameof(OrderBookSubscriber), nameof(ProcessOrderBookAsync), orderBook.ToJson(), $"Failed to process orderbook: {ex.ToAsyncString()}");
+                throw;
             }
         }
 
