@@ -71,9 +71,21 @@ namespace Lykke.Job.QuotesProducer.Services.Quotes
             if (validationErrors.Any())
             {
                 var message = string.Join("\r\n", validationErrors);
-                await _log.WriteWarningAsync(nameof(OrderBookSubscriber), nameof(ProcessOrderBookAsync),
-                    orderBook.ToJson(), message);
+                var context = new
+                {
+                    orderBook.AssetPair,
+                    orderBook.IsBuy,
+                    orderBook.Timestamp
+                };
+                await _log.WriteWarningAsync(nameof(OrderBookSubscriber), nameof(ProcessOrderBookAsync), context.ToJson(), message);
 
+                return;
+            }
+
+            // Is to frequent case, to log it
+
+            if (!orderBook.Prices.Any())
+            {
                 return;
             }
 
@@ -107,11 +119,11 @@ namespace Lykke.Job.QuotesProducer.Services.Quotes
                 {
                     errors.Add("Invalid 'Prices': null");
                 }
-                else if (orderBook.Prices.All(p => p.Price <= 0))
+                else if (orderBook.Prices.All(p => p.Price <= 0) && orderBook.Prices.Any())
                 {
-                    var prices = orderBook.Prices.Select(p => p.Price.ToString(CultureInfo.InvariantCulture));
+                    var prices = orderBook.Prices.Limit(10).Select(p => p.Price.ToString(CultureInfo.InvariantCulture));
 
-                    errors.Add($"All 'Prices' is negative or zero: {string.Join(", ", prices)}");
+                    errors.Add($"All prices is negative or zero. Top 10: [{string.Join(", ", prices)}]");
                 }
             }
 
