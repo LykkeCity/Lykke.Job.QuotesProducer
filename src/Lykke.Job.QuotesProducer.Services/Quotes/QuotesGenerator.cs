@@ -12,8 +12,8 @@ namespace Lykke.Job.QuotesProducer.Services.Quotes
         {
             // Calculate order min/max
             var extremPrice = orderBook.IsBuy
-                ? orderBook.Prices.Select(vp => vp.Price).Aggregate(Math.Max)
-                : orderBook.Prices.Select(vp => vp.Price).Aggregate(Math.Min);
+                ? orderBook.Prices.Where(p => p.Price > 0).Select(vp => vp.Price).Aggregate(Math.Max)
+                : orderBook.Prices.Where(p => p.Price > 0).Select(vp => vp.Price).Aggregate(Math.Min);
 
             return new Quote
             {

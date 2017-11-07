@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using AsyncFriendlyStackTrace;
@@ -36,17 +37,17 @@ namespace Lykke.Job.QuotesProducer.Services.Quotes
             try
             {
                 _subscriber = new RabbitMqSubscriber<IOrderBook>(settings,
-                        new ResilientErrorHandlingStrategy(_log, settings,
-                            retryTimeout: TimeSpan.FromSeconds(10),
-                            retryNum: 10,
-                            next: new DeadQueueErrorHandlingStrategy(_log, settings)))
-                    .SetMessageDeserializer(new JsonMessageDeserializer<OrderBook>())
-                    .SetMessageReadStrategy(new MessageReadQueueStrategy())
-                    .Subscribe(ProcessOrderBookAsync)
-                    .CreateDefaultBinding()
-                    .SetLogger(_log)
-                    .Start();
-            }
+                    new ResilientErrorHandlingStrategy(_log, settings,
+                        retryTimeout: TimeSpan.FromSeconds(10),
+                        retryNum: 10,
+                        next: new DeadQueueErrorHandlingStrategy(_log, settings)))
+                .SetMessageDeserializer(new JsonMessageDeserializer<OrderBook>())
+                .SetMessageReadStrategy(new MessageReadQueueStrategy())
+                .Subscribe(ProcessOrderBookAsync)
+                .CreateDefaultBinding()
+                .SetLogger(_log)
+                .Start();
+        }
             catch (Exception ex)
             {
                 _log.WriteErrorAsync(nameof(OrderBookSubscriber), nameof(Start), null, ex).Wait();
@@ -66,29 +67,30 @@ namespace Lykke.Job.QuotesProducer.Services.Quotes
 
         private async Task ProcessOrderBookAsync(IOrderBook orderBook)
         {
-            try
+            var validationErrors = ValidateOrderBook(orderBook);
+            if (validationErrors.Any())
             {
-                var validationErrors = ValidateOrderBook(orderBook);
-                if (validationErrors.Any())
+                var message = string.Join("\r\n", validationErrors);
+                var context = new
                 {
-                    var message = string.Join("\r\n", validationErrors);
-                    await _log.WriteWarningAsync(nameof(OrderBookSubscriber), nameof(ProcessOrderBookAsync), orderBook.ToJson(), message);
+                    orderBook.AssetPair,
+                    orderBook.IsBuy,
+                    orderBook.Timestamp
+                };
+                await _log.WriteWarningAsync(nameof(OrderBookSubscriber), nameof(ProcessOrderBookAsync), context.ToJson(), message);
 
-                    return;
-                }
-
-                if (!orderBook.Prices.Any())
-                {
-                    return;
-                }
-
-                await _quotesManager.ProcessOrderBookAsync(orderBook);
+                return;
             }
-            catch (Exception ex)
+
+            // Is to frequent case, to log it
+
+            if (!orderBook.Prices.Any())
             {
-                await _log.WriteWarningAsync(nameof(OrderBookSubscriber), nameof(ProcessOrderBookAsync), orderBook.ToJson(), $"Failed to process orderbook: {ex.ToAsyncString()}");
-                throw;
+                return;
             }
+
+            await _quotesManager.ProcessOrderBookAsync(orderBook);
+
         }
 
         private static ICollection<string> ValidateOrderBook(IOrderBook orderBook)
@@ -107,15 +109,21 @@ namespace Lykke.Job.QuotesProducer.Services.Quotes
                 }
                 if ((orderBook.Timestamp == DateTime.MinValue || orderBook.Timestamp == DateTime.MaxValue))
                 {
-                    errors.Add(string.Format("Invalid 'Timestamp' range: '{0}'", orderBook.Timestamp));
+                    errors.Add($"Invalid 'Timestamp' range: '{ (object)orderBook.Timestamp}'");
                 }
                 if (orderBook.Timestamp.Kind != DateTimeKind.Utc)
                 {
-                    errors.Add(string.Format("Invalid 'Timestamp' Kind (UTC is required): '{0}'", orderBook.Timestamp));
+                    errors.Add($"Invalid 'Timestamp' Kind (UTC is required): '{ (object)orderBook.Timestamp}'");
                 }
                 if (orderBook.Prices == null)
                 {
                     errors.Add("Invalid 'Prices': null");
+                }
+                else if (orderBook.Prices.All(p => p.Price <= 0) && orderBook.Prices.Any())
+                {
+                    var prices = orderBook.Prices.Limit(10).Select(p => p.Price.ToString(CultureInfo.InvariantCulture));
+
+                    errors.Add($"All prices is negative or zero. Top 10: [{string.Join(", ", prices)}]");
                 }
             }
 
