@@ -1,26 +1,28 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
-using Lykke.Domain.Prices.Contracts;
-using Lykke.Domain.Prices.Model;
+using JetBrains.Annotations;
+using Lykke.Job.QuotesProducer.Contract;
 using Lykke.Job.QuotesProducer.Core.Services.Quotes;
 
 namespace Lykke.Job.QuotesProducer.Services.Quotes
 {
+    [UsedImplicitly(ImplicitUseKindFlags.InstantiatedNoFixedConstructorSignature)]
     public class QuotesGenerator : IQuotesGenerator
     {
-        public IQuote Generate(IOrderBook orderBook)
+        public QuoteMessage Generate(string assetPair, bool isBuy, DateTime timestamp, IEnumerable<double> prices)
         {
-            // Calculate order min/max
-            var extremPrice = orderBook.IsBuy
-                ? orderBook.Prices.Where(p => p.Price > 0).Select(vp => vp.Price).Aggregate(Math.Max)
-                : orderBook.Prices.Where(p => p.Price > 0).Select(vp => vp.Price).Aggregate(Math.Min);
+            // Calculates best price
+            var bestPrice = isBuy
+                ? prices.Where(p => p > 0).Aggregate(Math.Max)
+                : prices.Where(p => p > 0).Aggregate(Math.Min);
 
-            return new Quote
+            return new QuoteMessage
             {
-                AssetPair = orderBook.AssetPair,
-                IsBuy = orderBook.IsBuy,
-                Price = extremPrice,
-                Timestamp = orderBook.Timestamp
+                AssetPair = assetPair,
+                IsBuy = isBuy,
+                Price = bestPrice,
+                Timestamp = timestamp
             };
         }
     }
