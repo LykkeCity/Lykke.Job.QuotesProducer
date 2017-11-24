@@ -1,9 +1,11 @@
-﻿using Lykke.Domain.Prices.Contracts;
+﻿using System;
+using System.Collections.Generic;
+using Lykke.Job.QuotesProducer.Contract;
 
 namespace Lykke.Job.QuotesProducer.Core.Services.Quotes
 {
     public interface IQuotesGenerator
     {
-        IQuote Generate(IOrderBook orderBook);
+        QuoteMessage Generate(string assetPair, bool isBuy, DateTime timestamp, IEnumerable<double> prices);
     }
 }

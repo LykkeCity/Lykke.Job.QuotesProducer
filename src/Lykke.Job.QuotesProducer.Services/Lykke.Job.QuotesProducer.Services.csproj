@@ -11,6 +11,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\contract\Lykke.Job.QuotesProducer.Contract\Lykke.Job.QuotesProducer.Contract.csproj" />
     <ProjectReference Include="..\Lykke.Job.QuotesProducer.Core\Lykke.Job.QuotesProducer.Core.csproj" />
   </ItemGroup>
 

@@ -1,17 +1,19 @@
 ﻿using System.Threading.Tasks;
 using Common.Log;
-using Lykke.Domain.Prices.Contracts;
+using JetBrains.Annotations;
+using Lykke.Job.QuotesProducer.Contract;
 using Lykke.Job.QuotesProducer.Core.Services.Quotes;
 using Lykke.RabbitMqBroker.Publisher;
 using Lykke.RabbitMqBroker.Subscriber;
 
 namespace Lykke.Job.QuotesProducer.Services.Quotes
 {
+    [UsedImplicitly(ImplicitUseKindFlags.InstantiatedNoFixedConstructorSignature)]
     public class QuotesPublisher : IQuotesPublisher
     {
         private readonly ILog _log;
         private readonly string _rabbitConnectionString;
-        private RabbitMqPublisher<IQuote> _publisher;
+        private RabbitMqPublisher<QuoteMessage> _publisher;
 
         public QuotesPublisher(
             ILog log,
@@ -27,8 +29,8 @@ namespace Lykke.Job.QuotesProducer.Services.Quotes
                 .CreateForPublisher(_rabbitConnectionString, "quotefeed")
                 .MakeDurable();
 
-            _publisher = new RabbitMqPublisher<IQuote>(settings)
-                .SetSerializer(new JsonMessageSerializer<IQuote>())
+            _publisher = new RabbitMqPublisher<QuoteMessage>(settings)
+                .SetSerializer(new JsonMessageSerializer<QuoteMessage>())
                 .SetPublishStrategy(new DefaultFanoutPublishStrategy(settings))
                 .PublishSynchronously()
                 .SetLogger(_log)
@@ -45,7 +47,7 @@ namespace Lykke.Job.QuotesProducer.Services.Quotes
             _publisher?.Stop();
         }
 
-        public Task PublishAsync(IQuote candle)
+        public Task PublishAsync(QuoteMessage candle)
         {
             return _publisher.ProduceAsync(candle);
         }

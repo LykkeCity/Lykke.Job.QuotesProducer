@@ -1,9 +1,12 @@
-﻿using System.Threading.Tasks;
-using Lykke.Domain.Prices.Contracts;
+﻿using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using JetBrains.Annotations;
 using Lykke.Job.QuotesProducer.Core.Services.Quotes;
 
 namespace Lykke.Job.QuotesProducer.Services.Quotes
 {
+    [UsedImplicitly(ImplicitUseKindFlags.InstantiatedNoFixedConstructorSignature)]
     public class QuotesManager : IQuotesManager
     {
         private readonly IQuotesPublisher _publisher;
@@ -15,9 +18,9 @@ namespace Lykke.Job.QuotesProducer.Services.Quotes
             _generator = generator;
         }
 
-        public Task ProcessOrderBookAsync(IOrderBook orderBook)
+        public Task ProcessOrderBookAsync(string assetPair, bool isBuy, DateTime timestamp, IEnumerable<double> prices)
         {
-            var quote = _generator.Generate(orderBook);
+            var quote = _generator.Generate(assetPair, isBuy, timestamp, prices);
 
             return _publisher.PublishAsync(quote);
         }
