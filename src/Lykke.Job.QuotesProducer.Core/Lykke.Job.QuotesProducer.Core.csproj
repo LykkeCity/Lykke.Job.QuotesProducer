@@ -11,7 +11,10 @@
 
   <ItemGroup>
     <PackageReference Include="Lykke.Common" Version="3.0.2" />
-    <PackageReference Include="Lykke.Domain.Prices" Version="0.9.11" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\contract\Lykke.Job.QuotesProducer.Contract\Lykke.Job.QuotesProducer.Contract.csproj" />
   </ItemGroup>
 
 </Project>
