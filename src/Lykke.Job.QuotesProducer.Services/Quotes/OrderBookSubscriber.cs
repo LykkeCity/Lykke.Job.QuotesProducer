@@ -83,8 +83,9 @@ namespace Lykke.Job.QuotesProducer.Services.Quotes
             }
 
             // It is too frequent case to log it
+            var prices = orderBookMessage.Prices.Where(p => p.Price > 0).ToArray();
 
-            if (!orderBookMessage.Prices.Any())
+            if (!prices.Any())
             {
                 return;
             }
@@ -93,7 +94,7 @@ namespace Lykke.Job.QuotesProducer.Services.Quotes
                 orderBookMessage.AssetPair, 
                 orderBookMessage.IsBuy, 
                 orderBookMessage.Timestamp,
-                orderBookMessage.Prices.Select(vp => vp.Price));
+                prices.Select(vp => vp.Price));
         }
 
         private static ICollection<string> ValidateOrderBook(OrderBookMessage orderBookMessage)
@@ -122,11 +123,11 @@ namespace Lykke.Job.QuotesProducer.Services.Quotes
                 {
                     errors.Add("Invalid 'Prices': null");
                 }
-                else if (orderBookMessage.Prices.All(p => p.Price <= 0) && orderBookMessage.Prices.Any())
+                else if (orderBookMessage.Prices.All(p => p.Price < 0) && orderBookMessage.Prices.Any())
                 {
                     var prices = orderBookMessage.Prices.Limit(10).Select(p => p.Price.ToString(CultureInfo.InvariantCulture));
 
-                    errors.Add($"All prices is negative or zero. Top 10: [{string.Join(", ", prices)}]");
+                    errors.Add($"All prices is negative. Top 10: [{string.Join(", ", prices)}]");
                 }
             }
 
