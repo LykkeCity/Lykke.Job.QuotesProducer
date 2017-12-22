@@ -14,8 +14,8 @@ namespace Lykke.Job.QuotesProducer.Services.Quotes
         {
             // Calculates best price
             var bestPrice = isBuy
-                ? prices.Where(p => p > 0).Aggregate(Math.Max)
-                : prices.Where(p => p > 0).Aggregate(Math.Min);
+                ? prices.Aggregate(Math.Max)
+                : prices.Aggregate(Math.Min);
 
             return new QuoteMessage
             {
