@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Common;
 using Common.Log;
 using JetBrains.Annotations;
+using Lykke.Common.Log;
 using Lykke.Job.QuotesProducer.Core.Services.Quotes;
 using Lykke.Job.QuotesProducer.Services.Quotes.Messages;
 using Lykke.RabbitMqBroker;
@@ -17,13 +18,15 @@ namespace Lykke.Job.QuotesProducer.Services.Quotes
     public class OrderBookSubscriber : IOrderBookSubscriber
     {
         private readonly ILog _log;
+        private readonly ILogFactory _logFactory;
         private readonly IQuotesManager _quotesManager;
         private readonly string _rabbitConnectionString;
         private RabbitMqSubscriber<OrderBookMessage> _subscriber;
 
-        public OrderBookSubscriber(ILog log, IQuotesManager quotesManager, string rabbitConnectionString)
+        public OrderBookSubscriber(ILogFactory logFactory, IQuotesManager quotesManager, string rabbitConnectionString)
         {
-            _log = log;
+            _log = logFactory.CreateLog(this);
+            _logFactory = logFactory;
             _quotesManager = quotesManager;
             _rabbitConnectionString = rabbitConnectionString;
         }
@@ -31,26 +34,25 @@ namespace Lykke.Job.QuotesProducer.Services.Quotes
         public void Start()
         {
             var settings = RabbitMqSubscriptionSettings
-                .CreateForSubscriber(_rabbitConnectionString, "orderbook", "quotesproducer")
+                .ForSubscriber(_rabbitConnectionString, "orderbook", "quotesproducer")
                 .MakeDurable();
 
             try
             {
-                _subscriber = new RabbitMqSubscriber<OrderBookMessage>(settings,
-                    new ResilientErrorHandlingStrategy(_log, settings,
+                _subscriber = new RabbitMqSubscriber<OrderBookMessage>(_logFactory, settings,
+                    new ResilientErrorHandlingStrategy(_logFactory, settings,
                         retryTimeout: TimeSpan.FromSeconds(10),
                         retryNum: 10,
-                        next: new DeadQueueErrorHandlingStrategy(_log, settings)))
+                        next: new DeadQueueErrorHandlingStrategy(_logFactory, settings)))
                 .SetMessageDeserializer(new JsonMessageDeserializer<OrderBookMessage>())
                 .SetMessageReadStrategy(new MessageReadQueueStrategy())
                 .Subscribe(ProcessOrderBookAsync)
                 .CreateDefaultBinding()
-                .SetLogger(_log)
                 .Start();
         }
             catch (Exception ex)
             {
-                _log.WriteErrorAsync(nameof(OrderBookSubscriber), nameof(Start), null, ex).Wait();
+                _log.Error(nameof(Start), ex);
                 throw;
             }
         }
@@ -77,7 +79,8 @@ namespace Lykke.Job.QuotesProducer.Services.Quotes
                     orderBookMessage.IsBuy,
                     orderBookMessage.Timestamp
                 };
-                await _log.WriteWarningAsync(nameof(OrderBookSubscriber), nameof(ProcessOrderBookAsync), context.ToJson(), message);
+
+                _log.Warning(nameof(ProcessOrderBookAsync), message, context: context.ToJson());
 
                 return;
             }
