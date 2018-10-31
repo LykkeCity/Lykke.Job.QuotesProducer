@@ -6,11 +6,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Folder Include="Domain" />
     <Folder Include="Domain\" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Lykke.Common" Version="6.8.4" />
+    <PackageReference Include="Lykke.Common" Version="7.3.0" />
   </ItemGroup>
 
   <ItemGroup>
