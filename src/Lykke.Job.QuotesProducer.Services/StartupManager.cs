@@ -1,7 +1,8 @@
 using System.Threading.Tasks;
 using Common.Log;
-using Lykke.Job.QuotesProducer.Core.Services;
+using Lykke.Common.Log;
 using Lykke.Job.QuotesProducer.Core.Services.Quotes;
+using Lykke.Sdk;
 
 namespace Lykke.Job.QuotesProducer.Services
 {
@@ -12,26 +13,26 @@ namespace Lykke.Job.QuotesProducer.Services
         private readonly IQuotesPublisher _quotesPublisher;
 
         public StartupManager(
-            ILog log,
+            ILogFactory logFactory,
             IOrderBookSubscriber orderBookSubscriber,
             IQuotesPublisher quotesPublisher)
         {
-            _log = log;
+            _log = logFactory.CreateLog(this);
             _orderBookSubscriber = orderBookSubscriber;
             _quotesPublisher = quotesPublisher;
         }
 
         public async Task StartAsync()
         {
-            await _log.WriteInfoAsync(nameof(StartupManager), nameof(StartAsync), "", "Starting quotes publisher...");
+            _log.Info(nameof(StartAsync), "Starting quotes publisher...");
 
             _quotesPublisher.Start();
 
-            await _log.WriteInfoAsync(nameof(StartupManager), nameof(StartAsync), "", "Starting order book subscriber...");
+            _log.Info(nameof(StartAsync), "Starting order book subscriber...");
 
             _orderBookSubscriber.Start();
 
-            await _log.WriteInfoAsync(nameof(StartupManager), nameof(StartAsync), "", "Started up");
+            _log.Info(nameof(StartAsync), "Started up");
         }
     }
 }

@@ -1,6 +1,6 @@
 ﻿using System.Threading.Tasks;
-using Common.Log;
 using JetBrains.Annotations;
+using Lykke.Common.Log;
 using Lykke.Job.QuotesProducer.Contract;
 using Lykke.Job.QuotesProducer.Core.Services.Quotes;
 using Lykke.RabbitMqBroker.Publisher;
@@ -11,29 +11,28 @@ namespace Lykke.Job.QuotesProducer.Services.Quotes
     [UsedImplicitly(ImplicitUseKindFlags.InstantiatedNoFixedConstructorSignature)]
     public class QuotesPublisher : IQuotesPublisher
     {
-        private readonly ILog _log;
+        private readonly ILogFactory _logFactory;
         private readonly string _rabbitConnectionString;
         private RabbitMqPublisher<QuoteMessage> _publisher;
 
         public QuotesPublisher(
-            ILog log,
+            ILogFactory logFactory,
             string rabbitConnectionString)
         {
-            _log = log;
+            _logFactory = logFactory;
             _rabbitConnectionString = rabbitConnectionString;
         }
 
         public void Start()
         {
             var settings = RabbitMqSubscriptionSettings
-                .CreateForPublisher(_rabbitConnectionString, "quotefeed")
+                .ForPublisher(_rabbitConnectionString, "quotefeed")
                 .MakeDurable();
 
-            _publisher = new RabbitMqPublisher<QuoteMessage>(settings)
+            _publisher = new RabbitMqPublisher<QuoteMessage>(_logFactory, settings)
                 .SetSerializer(new JsonMessageSerializer<QuoteMessage>())
                 .SetPublishStrategy(new DefaultFanoutPublishStrategy(settings))
                 .PublishSynchronously()
-                .SetLogger(_log)
                 .Start();
         }
 
