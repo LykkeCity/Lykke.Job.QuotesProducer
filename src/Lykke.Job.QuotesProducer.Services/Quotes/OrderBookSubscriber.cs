@@ -47,6 +47,7 @@ namespace Lykke.Job.QuotesProducer.Services.Quotes
                 .SetMessageDeserializer(new JsonMessageDeserializer<OrderBookMessage>())
                 .SetMessageReadStrategy(new MessageReadQueueStrategy())
                 .Subscribe(ProcessOrderBookAsync)
+                .SetPrefetchCount(1000)
                 .CreateDefaultBinding()
                 .Start();
         }
